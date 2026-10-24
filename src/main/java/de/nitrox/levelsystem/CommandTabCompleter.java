@@ -22,9 +22,11 @@ public class CommandTabCompleter implements TabCompleter {
         List<String> result = new ArrayList<>();
 
         if (args.length == 1) {
+            result.add("gui");
             result.add("addxp");
             result.add("removexp");
             result.add("levelstats");
+            result.add("testreward");
             result.add("reload");
             return result;
         }
@@ -33,6 +35,10 @@ public class CommandTabCompleter implements TabCompleter {
         List<String> ids = new ArrayList<>(plugin.getManager().getIdentifiers());
 
         switch (sub) {
+
+            case "gui":
+                if (args.length == 2) return ids;
+                break;
 
             case "addxp":
             case "removexp":
@@ -47,6 +53,22 @@ public class CommandTabCompleter implements TabCompleter {
             case "levelstats":
                 if (args.length == 2) return ids;
                 if (args.length == 3) {
+                    Bukkit.getOnlinePlayers().forEach(p -> result.add(p.getName()));
+                    return result;
+                }
+                break;
+
+            case "testreward":
+                if (args.length == 2) return ids;
+                if (args.length == 3) {
+                    LevelSystemInstance inst = plugin.getManager().get(args[1]);
+                    int max = inst != null ? inst.getGlobalMaxLevel() : 10;
+                    for (int i = 1; i <= Math.min(max, 50); i++) {
+                        result.add(String.valueOf(i));
+                    }
+                    return result;
+                }
+                if (args.length == 4) {
                     Bukkit.getOnlinePlayers().forEach(p -> result.add(p.getName()));
                     return result;
                 }

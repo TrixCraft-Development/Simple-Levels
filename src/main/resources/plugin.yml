@@ -1,6 +1,6 @@
 name: SimpleLevels
 main: de.nitrox.levelsystem.LevelSystem
-version: 1.4
+version: 1.5
 api-version: 1.20
 description: Multi-LevelSystem plugin
 author: Nitrox_XD
@@ -23,4 +23,12 @@ permissions:
 
   simplelevels.reload:
     description: Allows reloading the plugin
+    default: op
+
+  simplelevels.gui:
+    description: Allows opening the level system GUI
+    default: true
+
+  simplelevels.testreward:
+    description: Allows testing level rewards via command
     default: op

@@ -7,6 +7,15 @@ players: {}
 # Used for animated displays (ticks)
 tick-speed: 10
 
+# Whether rewards are automatically claimed upon leveling up (false = claim in GUI)
+auto-claim: false
+
+# Show level and XP progression in the player's XP bar
+show-level-in-xp-bar: false
+xp-bar:
+  disabled-worlds:
+    - example_world
+
 # Max levels (all levels up to the highest value are created automatically)
 max-levels:
   default: 10
@@ -19,6 +28,7 @@ default-design:
   display: "&eLevel %level% - &7Default"
 
 default-reward:
+  display: "&aLevel %level% Message"
   type: message
   messages:
     - "&aYou reached &eLevel %level%&a!"
@@ -30,12 +40,14 @@ levels:
       - "&cLevel 1 - &7Beginner"
       - "&4Level 1 - &7Beginner"
     reward:
+      display: "&e10 Coins"
       type: command
       commands:
         - "eco give %player_name% 10"
   2:
     display: "&bLevel 2 - &7Novice"
     reward:
+      display: "&aNovice Message"
       type: message
       messages:
         - "&aYou have just reached &eLevel 2&a!"
@@ -45,6 +57,7 @@ levels:
       - "&6Level 3 - &7Intermediate"
       - "&eLevel 3 - &7Intermediate"
     reward:
+      display: "&e50 Coins"
       type: command
       commands:
         - "eco give %player_name% 50"

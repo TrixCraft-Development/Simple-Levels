@@ -12,6 +12,8 @@ public class LevelSystem extends JavaPlugin {
     private RemoveXPCommand removeXPCommand;
     private LevelStatsCommand levelStatsCommand;
     private ReloadCommand reloadCommand;
+    private GUICommand guiCommand;
+    private TestRewardCommand testRewardCommand;
 
     @Override
     public void onEnable() {
@@ -37,6 +39,8 @@ public class LevelSystem extends JavaPlugin {
         removeXPCommand = new RemoveXPCommand(this);
         levelStatsCommand = new LevelStatsCommand(this);
         reloadCommand = new ReloadCommand(this);
+        guiCommand = new GUICommand(this);
+        testRewardCommand = new TestRewardCommand(this);
 
         // placeholders
         if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
@@ -48,6 +52,7 @@ public class LevelSystem extends JavaPlugin {
 
         // listeners
         Bukkit.getPluginManager().registerEvents(new PlayerListener(this), this);
+        Bukkit.getPluginManager().registerEvents(new GUIListener(), this);
 
         getLogger().info("LevelSystem enabled — loaded " + manager.getAll().size() + " system(s).");
     }
@@ -83,5 +88,13 @@ public class LevelSystem extends JavaPlugin {
 
     public ReloadCommand getReloadCommand() {
         return reloadCommand;
+    }
+
+    public GUICommand getGuiCommand() {
+        return guiCommand;
+    }
+
+    public TestRewardCommand getTestRewardCommand() {
+        return testRewardCommand;
     }
 }

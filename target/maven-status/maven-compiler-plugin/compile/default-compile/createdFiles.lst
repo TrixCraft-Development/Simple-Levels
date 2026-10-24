@@ -1,6 +1,8 @@
 de\nitrox\levelsystem\LevelSystemManager.class
 de\nitrox\levelsystem\CommandTabCompleter.class
+de\nitrox\levelsystem\LevelGUI.class
 de\nitrox\levelsystem\LevelPlaceholder.class
+de\nitrox\levelsystem\GUICommand.class
 de\nitrox\levelsystem\LevelStatsCommand.class
 de\nitrox\levelsystem\LevelSystemInstance.class
 de\nitrox\levelsystem\ReloadCommand.class
@@ -8,4 +10,6 @@ de\nitrox\levelsystem\SimpleLevelsCommand.class
 de\nitrox\levelsystem\LevelSystem.class
 de\nitrox\levelsystem\PlayerListener.class
 de\nitrox\levelsystem\AddXPCommand.class
+de\nitrox\levelsystem\GUIListener.class
+de\nitrox\levelsystem\TestRewardCommand.class
 de\nitrox\levelsystem\RemoveXPCommand.class

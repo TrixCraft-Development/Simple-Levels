@@ -66,14 +66,19 @@ public class AddXPCommand {
 
         int newLevel = inst.getPlayerLevel(uuid);
 
-        if (oldLevel == 0 && newLevel >= 1) {
-            inst.giveRewardIfPresent(target, 1);
-        }
-
-        if (newLevel > oldLevel) {
-            for (int lvl = Math.max(2, oldLevel + 1); lvl <= newLevel; lvl++) {
-                inst.giveRewardIfPresent(target, lvl);
+        if (inst.isAutoClaim()) {
+            if (oldLevel == 0 && newLevel >= 1) {
+                inst.giveRewardIfPresent(target, 1);
             }
+
+            if (newLevel > oldLevel) {
+                for (int lvl = Math.max(2, oldLevel + 1); lvl <= newLevel; lvl++) {
+                    inst.giveRewardIfPresent(target, lvl);
+                }
+            }
+        } else if (newLevel > oldLevel) {
+            target.sendMessage(ChatColor.translateAlternateColorCodes('&',
+                    "&aYou unlocked new level reward(s)! Claim them in &e/simplelevels gui " + id));
         }
 
 

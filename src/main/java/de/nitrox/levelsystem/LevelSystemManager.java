@@ -1,6 +1,7 @@
 package de.nitrox.levelsystem;
 
 import org.bukkit.Bukkit;
+import org.bukkit.entity.Player;
 
 import java.io.File;
 import java.util.*;
@@ -52,6 +53,27 @@ public class LevelSystemManager {
         }
 
         startAnimationTask();
+        Bukkit.getOnlinePlayers().forEach(this::updateXpBar);
+    }
+
+    public void updateXpBar(Player player) {
+        if (player == null || !player.isOnline()) return;
+        String worldName = player.getWorld().getName();
+        for (LevelSystemInstance inst : systems.values()) {
+            if (inst.isXpBarActiveInWorld(worldName)) {
+                inst.updatePlayerXpBar(player);
+                return;
+            }
+        }
+    }
+
+    public boolean hasActiveXpBarInWorld(String worldName) {
+        for (LevelSystemInstance inst : systems.values()) {
+            if (inst.isXpBarActiveInWorld(worldName)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public LevelSystemInstance get(String identifier) {
@@ -73,7 +95,14 @@ public class LevelSystemManager {
         taskId = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
             try {
                 for (LevelSystemInstance inst : systems.values()) {
-                    inst.tick();
+                    if (inst.tick()) {
+                        Bukkit.getOnlinePlayers().forEach(player -> {
+                            if (player.getOpenInventory().getTopInventory().getHolder() instanceof LevelGUI gui
+                                    && gui.getSystem() == inst) {
+                                gui.render();
+                            }
+                        });
+                    }
                 }
             } catch (Throwable t) {
                 plugin.getLogger().severe("Error while advancing animation frames:");

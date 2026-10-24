@@ -20,12 +20,15 @@ public class LevelSystemInstance {
     private final Map<Integer, Integer> explicitXpPerLevel = new HashMap<>();
     private final Map<Integer, String> levelPermissions = new HashMap<>();
     private List<String> disabledWorlds = new ArrayList<>();
+    private boolean showLevelInXpBar = false;
+    private List<String> xpBarDisabledWorlds = new ArrayList<>();
 
     // Animated displays
     private final Map<Integer, List<String>> animatedFrames = new HashMap<>();
     private final Map<Integer, Integer> frameIndex = new HashMap<>();
 
     private int tickSpeed = 20;
+    private boolean autoClaim = false;
     private int internalTickCounter = 0;
     private int maxLevelDefault = 0;
     private int maxLevelGlobal = 0;
@@ -52,10 +55,48 @@ public class LevelSystemInstance {
 
         cfg = YamlConfiguration.loadConfiguration(file);
 
+        boolean configUpdated = false;
+        if (!cfg.contains("auto-claim")) {
+            cfg.set("auto-claim", false);
+            configUpdated = true;
+        }
+        if (!cfg.contains("show-level-in-xp-bar")) {
+            cfg.set("show-level-in-xp-bar", false);
+            configUpdated = true;
+        }
+        if (!cfg.contains("xp-bar.disabled-worlds") && !cfg.contains("xp-bar-disabled-worlds")) {
+            cfg.set("xp-bar.disabled-worlds", List.of("example_world"));
+            configUpdated = true;
+        }
+        if (cfg.isConfigurationSection("default-reward") && !cfg.contains("default-reward.display")) {
+            cfg.set("default-reward.display", "&aLevel %level% Reward");
+            configUpdated = true;
+        }
+        if (cfg.isConfigurationSection("levels")) {
+            for (String key : cfg.getConfigurationSection("levels").getKeys(false)) {
+                String rewardPath = "levels." + key + ".reward";
+                if (cfg.isConfigurationSection(rewardPath) && !cfg.contains(rewardPath + ".display")) {
+                    cfg.set(rewardPath + ".display", "&eLevel " + key + " Reward");
+                    configUpdated = true;
+                }
+            }
+        }
+        if (configUpdated) {
+            save();
+        }
+
         tickSpeed = Math.max(1, cfg.getInt("tick-speed", 20));
+        autoClaim = cfg.getBoolean("auto-claim", false);
 
         disabledWorlds = cfg.getStringList("disabled-worlds");
         if (disabledWorlds == null) disabledWorlds = new ArrayList<>();
+
+        showLevelInXpBar = cfg.getBoolean("show-level-in-xp-bar", cfg.getBoolean("xp-bar.enabled", false));
+        xpBarDisabledWorlds = cfg.getStringList("xp-bar.disabled-worlds");
+        if (xpBarDisabledWorlds == null || xpBarDisabledWorlds.isEmpty()) {
+            xpBarDisabledWorlds = cfg.getStringList("xp-bar-disabled-worlds");
+        }
+        if (xpBarDisabledWorlds == null) xpBarDisabledWorlds = new ArrayList<>();
 
         explicitXpPerLevel.clear();
         animatedFrames.clear();
@@ -151,6 +192,61 @@ public class LevelSystemInstance {
         return disabledWorlds.contains(worldName);
     }
 
+    public boolean isShowLevelInXpBar() {
+        return showLevelInXpBar;
+    }
+
+    public boolean isXpBarDisabledInWorld(String worldName) {
+        return isWorldDisabled(worldName) || xpBarDisabledWorlds.contains(worldName);
+    }
+
+    public boolean isXpBarActiveInWorld(String worldName) {
+        return showLevelInXpBar && !isXpBarDisabledInWorld(worldName);
+    }
+
+    public void updatePlayerXpBar(Player player) {
+        if (player == null || !player.isOnline()) return;
+        if (!isXpBarActiveInWorld(player.getWorld().getName())) return;
+
+        UUID uuid = player.getUniqueId();
+        int currentLevel = getPlayerLevel(uuid);
+        int maxLevel = getMaxLevelForPlayer(player);
+
+        float progress;
+        if (currentLevel >= maxLevel) {
+            progress = 1.0f;
+        } else {
+            int currentXP = getPlayerXP(uuid);
+            int currentLevelStartXP = currentLevel <= 0 ? 0 : getRequiredXPForLevel(currentLevel);
+            int nextLevelXP = getRequiredXPForLevel(currentLevel + 1);
+            int span = nextLevelXP - currentLevelStartXP;
+
+            if (span > 0 && currentXP >= currentLevelStartXP) {
+                progress = (float) (currentXP - currentLevelStartXP) / (float) span;
+            } else if (nextLevelXP > 0) {
+                progress = (float) currentXP / (float) nextLevelXP;
+            } else {
+                progress = 0.0f;
+            }
+            progress = Math.max(0.0f, Math.min(1.0f, progress));
+        }
+
+        player.setLevel(currentLevel);
+        player.setExp(progress);
+    }
+
+    public boolean isAutoClaim() {
+        return autoClaim;
+    }
+
+    public int getGlobalMaxLevel() {
+        return maxLevelGlobal;
+    }
+
+    public String getLevelPermission(int level) {
+        return levelPermissions.get(level);
+    }
+
     /* ---------------------------------------------------
        XP & LEVEL LOGIC (PERMISSION AWARE)
      --------------------------------------------------- */
@@ -172,6 +268,10 @@ public class LevelSystemInstance {
     public void setPlayerXP(UUID uuid, int xp) {
         cfg.set("players." + uuid + ".xp", Math.max(0, xp));
         save();
+        Player player = plugin.getServer().getPlayer(uuid);
+        if (player != null) {
+            updatePlayerXpBar(player);
+        }
     }
 
     /**
@@ -247,17 +347,20 @@ public class LevelSystemInstance {
        ANIMATION TICK
      --------------------------------------------------- */
 
-    public void tick() {
+    public boolean tick() {
         internalTickCounter++;
-        if (internalTickCounter % tickSpeed != 0) return;
+        if (internalTickCounter % tickSpeed != 0) return false;
 
+        boolean updated = false;
         for (Map.Entry<Integer, List<String>> entry : animatedFrames.entrySet()) {
             if (entry.getValue().size() <= 1) continue;
 
             int lvl = entry.getKey();
             int idx = frameIndex.getOrDefault(lvl, 0);
             frameIndex.put(lvl, (idx + 1) % entry.getValue().size());
+            updated = true;
         }
+        return updated;
     }
 
     /* ---------------------------------------------------
@@ -298,13 +401,27 @@ public class LevelSystemInstance {
     }
 
     public void giveRewardIfPresent(Player player, int level) {
+        claimReward(player, level);
+    }
 
+    public boolean claimReward(Player player, int level) {
         String perm = levelPermissions.get(level);
-        if (perm != null && !player.hasPermission(perm)) return;
+        if (perm != null && !player.hasPermission(perm)) return false;
 
+        if (hasReward(player.getUniqueId(), level)) return false;
+
+        if (!executeReward(player, level)) {
+            markRewarded(player.getUniqueId(), level);
+            return true;
+        }
+
+        markRewarded(player.getUniqueId(), level);
+        return true;
+    }
+
+    public boolean executeReward(Player player, int level) {
         String base = getRewardBasePath(level);
-        if (base == null) return;
-        if (hasReward(player.getUniqueId(), level)) return;
+        if (base == null) return false;
 
         String type = cfg.getString(base + ".type", "").toLowerCase();
 
@@ -316,6 +433,7 @@ public class LevelSystemInstance {
                                 .replace("%level%", String.valueOf(level))
                 );
             }
+            return true;
         }
 
         if (type.equals("message")) {
@@ -325,9 +443,33 @@ public class LevelSystemInstance {
                         msg.replace("%level%", String.valueOf(level))
                 ));
             }
+            return true;
         }
 
-        markRewarded(player.getUniqueId(), level);
+        return false;
+    }
+
+    public boolean hasRewardConfigured(int level) {
+        return getRewardBasePath(level) != null;
+    }
+
+    public List<String> getRewardDisplay(int level) {
+        String base = getRewardBasePath(level);
+        if (base == null) return Collections.emptyList();
+
+        List<String> rawLines = readDisplayFrames(base + ".display");
+        if (rawLines.isEmpty() && !base.equals("default-reward")) {
+            rawLines = readDisplayFrames("default-reward.display");
+        }
+
+        List<String> formatted = new ArrayList<>();
+        for (String line : rawLines) {
+            formatted.add(ChatColor.translateAlternateColorCodes(
+                    '&',
+                    line.replace("%level%", String.valueOf(level))
+            ));
+        }
+        return formatted;
     }
 
     private String getRewardBasePath(int level) {

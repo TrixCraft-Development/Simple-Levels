@@ -40,6 +40,12 @@ public class SimpleLevelsCommand implements CommandExecutor {
             case "reload":
                 return plugin.getReloadCommand().execute(sender, subArgs);
 
+            case "gui":
+                return plugin.getGuiCommand().execute(sender, subArgs);
+
+            case "testreward":
+                return plugin.getTestRewardCommand().execute(sender, subArgs);
+
             case "help":
             default:
                 sendHelp(sender);
@@ -49,9 +55,11 @@ public class SimpleLevelsCommand implements CommandExecutor {
 
     private void sendHelp(CommandSender sender) {
         sender.sendMessage(ChatColor.GOLD + "=== SimpleLevels Commands ===");
+        sender.sendMessage(ChatColor.YELLOW + "/simplelevels gui <id>");
         sender.sendMessage(ChatColor.YELLOW + "/simplelevels addxp <id> <amount> <player>");
         sender.sendMessage(ChatColor.YELLOW + "/simplelevels removexp <id> <amount> <player>");
         sender.sendMessage(ChatColor.YELLOW + "/simplelevels levelstats <id> [player]");
+        sender.sendMessage(ChatColor.YELLOW + "/simplelevels testreward <id> <level> [player]");
         sender.sendMessage(ChatColor.YELLOW + "/simplelevels reload");
     }
 }
